@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupValidations, signinValidations } from "../validations/auth.js"
+import { signupValidations, signinValidations, patientOnboardValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { patientModel } from "../database/db_config.js";
@@ -69,7 +69,8 @@ patientAuthRouter.post("/signin", async (request, response) => {
         const userResponse = {
             id: patient.get("id"),
             name: patient.get("name"),
-            email: patient.get("email")
+            email: patient.get("email"),
+            type: "patient"
         }
 
         const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
@@ -81,6 +82,41 @@ patientAuthRouter.post("/signin", async (request, response) => {
                 accessToken,
                 refreshToken
             })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+patientAuthRouter.post("/onboard", async (request, response) => {
+    const onboardingData = request.body
+    const patientId = request.body.patientId
+
+
+    try {
+        await patientOnboardValidations.validate(onboardingData)
+
+        const patient = await patientModel.findOne({where: {id: patientId}})
+        
+        if (patient === null) {
+            throw new Error("Invalid patient id")
+        }
+
+        await patient.update({
+            healthHistory: onboardingData.healthHistory,
+            location: onboardingData.location,
+            lookingFor: onboardingData.lookingFor
+        })
+
+        await patient.save()
+
+        const safePatient = JSON.parse(JSON.stringify(patient))
+
+        delete safePatient.password
+
+        return response.status(200)
+            .json(safePatient)
     } catch (error) {
         console.error(error)
         return response.status(400)

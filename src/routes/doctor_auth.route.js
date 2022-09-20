@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupValidations, signinValidations } from "../validations/auth.js"
+import { signupValidations, signinValidations, doctorOnboardValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import sequelize, { doctorModel, patientModel } from "../database/db_config.js";
@@ -69,7 +69,8 @@ doctorAuthRouter.post("/signin", async (request, response) => {
         const userResponse = {
             id: doctor.get("id"),
             name: doctor.get("name"),
-            email: doctor.get("email")
+            email: doctor.get("email"),
+            type: "doctor"
         }
 
         const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
@@ -81,6 +82,44 @@ doctorAuthRouter.post("/signin", async (request, response) => {
                 accessToken,
                 refreshToken
             })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+doctorAuthRouter.post("/onboard", async (request, response) => {
+    const onboardingData = request.body
+    const doctorId = request.body.doctorId
+
+
+    try {
+        await doctorOnboardValidations.validate(onboardingData)
+
+        const doctor = await doctorModel.findOne({where: {id: doctorId}})
+
+        if (doctor === null) {
+            throw new Error("Invalid doctor id")
+        }
+
+        await doctor.update({
+            qualifications: onboardingData.qualifications,
+            experience: onboardingData.experience,
+            hospital: onboardingData.hospital,
+            location: onboardingData.location,
+            specialities: onboardingData.specialities,
+            onboardingComplete: true
+        })
+
+        await doctor.save()
+
+        const safeDoctor = JSON.parse(JSON.stringify(doctor))
+
+        delete safeDoctor.password
+
+        return response.status(200)
+            .json(safeDoctor)
     } catch (error) {
         console.error(error)
         return response.status(400)

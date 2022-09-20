@@ -32,14 +32,34 @@ expressApp.get("/", (request, response) => {
 
 const PORT = process.env.PORT || 3001
 
-
 expressApp.use("/doctor/auth", doctorAuthRouter)
 expressApp.use("/patient/auth", patientAuthRouter)
 
 try {
-    await sequelize.sync()
+    await sequelize.sync({force: true})
     await sequelize.authenticate()
     expressApp.listen(PORT, () => console.log("Express server up and running on", PORT))
 } catch (error) {
     console.log("Connection to database failed with ", error)
+}
+
+function authorize(request, response, next) {
+    const authorization = request.headers.authorization
+
+    try {
+        if (authorization === null || authorization === undefined) {
+            throw new Error("Invalid access token")
+        }
+
+        const token = authorization.split(" ")[1]
+        const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+
+        request.user = payload
+
+        next()
+    } catch (error) {
+        console.error(error)
+        return response.status(403)
+            .json({ error: true, message: error.message })
+    }
 }

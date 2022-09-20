@@ -25,12 +25,38 @@ export const doctorModel = sequelize.define("doctor", {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    setupComplete: {
+    onboardingComplete: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
+    },
+    consultationFees: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    qualifications: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+    },
+    experience: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    hospital: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    location: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    specialities: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
     }
 })
+
+// TODO: Doctor Availability 
 
 // Create patient table
 export const patientModel = sequelize.define("patient", {
@@ -52,10 +78,22 @@ export const patientModel = sequelize.define("patient", {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    setupComplete: {
+    onboardingComplete: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
+    },
+    healthHistory: {
+        type: DataTypes.ARRAY(DataTypes.ARRAY((DataTypes.STRING))),
+        allowNull: true,
+    },
+    location: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    lookingFor: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
     }
 })
 
