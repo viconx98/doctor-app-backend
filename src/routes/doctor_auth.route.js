@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupValidations, signinValidations, doctorOnboardValidations, doctorAvailabilityValidations } from "../validations/auth.js"
+import { signupValidations, signinValidations  } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import doctorModel from "../database/doctor.model.js";
@@ -33,7 +33,7 @@ doctorAuthRouter.post("/signup", async (request, response) => {
             email: newDoctor.get("email")
         }
 
-        const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
+        const accessToken = jwt.sign(userResponse, process.env.DOCTOR_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
         const refreshToken = jwt.sign(userResponse, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_TIME })
 
         return response.status(200)
@@ -74,7 +74,7 @@ doctorAuthRouter.post("/signin", async (request, response) => {
             type: "doctor"
         }
 
-        const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
+        const accessToken = jwt.sign(userResponse, process.env.DOCTOR_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
         const refreshToken = jwt.sign(userResponse, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_TIME })
 
         return response.status(200)
@@ -83,44 +83,6 @@ doctorAuthRouter.post("/signin", async (request, response) => {
                 accessToken,
                 refreshToken
             })
-    } catch (error) {
-        console.error(error)
-        return response.status(400)
-            .json({ error: true, message: error.message })
-    }
-})
-
-doctorAuthRouter.post("/onboard", async (request, response) => {
-    const onboardingData = request.body
-    const doctorId = request.body.doctorId
-
-    try {
-        await doctorOnboardValidations.validate(onboardingData)
-        await doctorAvailabilityValidations.validate(onboardingData.availability)
-
-        const doctor = await doctorModel.findOne({ where: { id: doctorId } })
-
-        if (doctor === null) {
-            throw new Error("Invalid doctor id")
-        }
-
-        await doctor.update({
-            qualifications: onboardingData.qualifications,
-            experience: onboardingData.experience,
-            hospital: onboardingData.hospital,
-            location: onboardingData.location,
-            specialities: onboardingData.specialities,
-            availability: onboardingData.availability,
-            onboardingComplete: true
-        })
-
-
-        const safeDoctor = JSON.parse(JSON.stringify(doctor))
-
-        delete safeDoctor.password
-
-        return response.status(200)
-            .json(safeDoctor)
     } catch (error) {
         console.error(error)
         return response.status(400)

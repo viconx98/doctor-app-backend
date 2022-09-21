@@ -1,7 +1,8 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken"
-import { closeAppointmentValidations } from "../validations/doctor.js";
+import { closeAppointmentValidations, doctorOnboardValidations, doctorAvailabilityValidations } from "../validations/doctor.js";
 import appointmentModel from "../database/appointment.model.js";
+import doctorModel from "../database/doctor.model.js";
 
 const doctorRouter = Router()
 
@@ -28,7 +29,70 @@ function authorize(request, response, next) {
 
 doctorRouter.use(authorize)
 
+doctorRouter.post("/onboard", async (request, response) => {
+    const onboardingData = request.body
+    const doctorId = request.user.id
+
+    try {
+        await doctorOnboardValidations.validate(onboardingData)
+        await doctorAvailabilityValidations.validate(onboardingData.availability)
+
+        const doctor = await doctorModel.findOne({ where: { id: doctorId } })
+
+        if (doctor === null) {
+            throw new Error("Invalid doctor id")
+        }
+
+        await doctor.update({
+            qualifications: onboardingData.qualifications,
+            experience: onboardingData.experience,
+            hospital: onboardingData.hospital,
+            location: onboardingData.location,
+            specialities: onboardingData.specialities,
+            availability: onboardingData.availability,
+            onboardingComplete: true
+        })
+
+
+        const safeDoctor = JSON.parse(JSON.stringify(doctor))
+
+        delete safeDoctor.password
+
+        return response.status(200)
+            .json(safeDoctor)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
 // TODO: Get all appointments
+doctorRouter.get("/appointments", async (request, response) => {
+    const doctorId = request.user.id
+    const status = request.query.status
+
+    try {
+        const filter = {
+            where: {
+                doctorId: doctorId
+            }
+        }
+
+        if (status !== undefined) filter.where.status = status
+
+        const appointments = await appointmentModel.findAll(filter)
+
+        return response.status(200)
+            .json(appointments)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+
 // TODO: Close appointment
 doctorRouter.post("/closeAppointment", async (request, response) => {
     const doctorId = request.user.id
@@ -43,7 +107,6 @@ doctorRouter.post("/closeAppointment", async (request, response) => {
             throw new Error("Invalid appointment id")
         }
         
-        console.log(appointment.get("doctorId"), doctorId)
         if (appointment.get("doctorId") !== doctorId) {
             throw new Error("This appointment doesn't belong to you")
         }

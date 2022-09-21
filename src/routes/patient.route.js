@@ -1,9 +1,10 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { createAppointmentValidations } from "../validations/patient.js";
+import { createAppointmentValidations, reviewValidations, patientOnboardValidations } from "../validations/patient.js";
 import doctorModel from "../database/doctor.model.js";
 import appointmentModel from "../database/appointment.model.js";
+import patientModel from "../database/patient.model.js";
 import { intToDay } from "../validations/constants.js";
 
 const patientRouter = Router()
@@ -30,8 +31,67 @@ function authorize(request, response, next) {
 }
 
 patientRouter.use(authorize)
+
+patientRouter.post("/onboard", async (request, response) => {
+    const onboardingData = request.body
+    const patientId = request.user.id
+
+    try {
+        await patientOnboardValidations.validate(onboardingData)
+
+        const patient = await patientModel.findOne({ where: { id: patientId } })
+
+        if (patient === null) {
+            throw new Error("Invalid patient id")
+        }
+
+        await patient.update({
+            healthHistory: onboardingData.healthHistory,
+            location: onboardingData.location,
+            lookingFor: onboardingData.lookingFor
+        })
+
+
+        const safePatient = JSON.parse(JSON.stringify(patient))
+
+        delete safePatient.password
+
+        return response.status(200)
+            .json(safePatient)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+
+
 // TODO: Get patient's upcoming appointments
-// TODO: Give rating and review to doctor
+patientRouter.get("/appointments", async (request, response) => {
+    const patientId = request.user.id
+    const status = request.query.status
+
+
+    try {
+        const filter = {
+            where: {
+                patientId: patientId
+            }
+        }
+
+        if (status !== undefined) filter.where.status = status
+
+        const appointments = await appointmentModel.findAll(filter)
+
+        return response.status(200)
+            .json(appointments)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
 
 // TODO: Book an appointment
 patientRouter.post("/createAppointment", async (request, response) => {
@@ -53,8 +113,7 @@ patientRouter.post("/createAppointment", async (request, response) => {
         const day = intToDay[appointmentDate.getDay()]
         const slot = appointmentData.slot
 
-        console.log(day, slot, doctor)
-        const availability = doctor.get("availability") 
+        const availability = doctor.get("availability")
         if (availability[day][slot] === undefined) {
             throw new Error("Invalid date or time for the appointment, please recheck the doctor's schedule.")
         }
@@ -65,7 +124,8 @@ patientRouter.post("/createAppointment", async (request, response) => {
                 where: {
                     doctorId: appointmentData.doctorId,
                     date: appointmentDate,
-                    slot: Number(slot)
+                    slot: Number(slot),
+                    status: "pending"
                 }
             })
 
@@ -81,8 +141,46 @@ patientRouter.post("/createAppointment", async (request, response) => {
             slot: Number(slot)
         })
 
-        return response.status(200) 
+        return response.status(200)
             .json(newAppointment)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+// TODO: Give rating and review to doctor
+patientRouter.post("/rateAndReview", async (request, response) => {
+    const patientId = request.user.id
+    const ratingData = request.body
+
+    try {
+        await reviewValidations.validate(ratingData)
+
+        const appointment = await appointmentModel.findOne({ where: { id: ratingData.appointmentId } })
+
+        if (appointment === null) {
+            throw new Error("Invalid appointment id")
+        }
+
+        if (appointment.get("status") !== "completed") {
+            throw new Error("This appointment hasn't been completed yet")
+        }
+
+        if (appointment.get("patientId") !== patientId) {
+            throw new Error("This appointment doesn't belong to you")
+        }
+
+        await appointment.update(
+            {
+                rating: ratingData.rating,
+                review: ratingData.review
+            }
+        )
+
+        return response.status(200)
+            .json(appointment)
     } catch (error) {
         console.error(error)
         return response.status(400)

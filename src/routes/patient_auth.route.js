@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupValidations, signinValidations, patientOnboardValidations } from "../validations/auth.js"
+import { signupValidations, signinValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import patientModel from "../database/patient.model.js";
@@ -27,15 +27,13 @@ patientAuthRouter.post("/signup", async (request, response) => {
 
         const newPatient = await patientModel.create({ name: authData.name, email: authData.email, password: hashedPassword })
 
-        console.log(newPatient)
-
         const userResponse = {
             id: newPatient.get("id"),
             name: newPatient.get("name"),
             email: newPatient.get("email")
         }
 
-        const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
+        const accessToken = jwt.sign(userResponse, process.env.PATIENT_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
         const refreshToken = jwt.sign(userResponse, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_TIME })
 
         return response.status(200)
@@ -53,7 +51,7 @@ patientAuthRouter.post("/signup", async (request, response) => {
 
 patientAuthRouter.post("/signin", async (request, response) => {
     const authData = request.body
-    console.log(authData)
+
     try {
         await signinValidations.validate(authData)
 
@@ -76,7 +74,7 @@ patientAuthRouter.post("/signin", async (request, response) => {
             type: "patient"
         }
 
-        const accessToken = jwt.sign(userResponse, process.env.ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
+        const accessToken = jwt.sign(userResponse, process.env.PATIENT_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
         const refreshToken = jwt.sign(userResponse, process.env.REFRESH_TOKEN_SECRET, { expiresIn: process.env.REFRESH_TOKEN_EXPIRE_TIME })
 
         return response.status(200)
@@ -85,40 +83,6 @@ patientAuthRouter.post("/signin", async (request, response) => {
                 accessToken,
                 refreshToken
             })
-    } catch (error) {
-        console.error(error)
-        return response.status(400)
-            .json({ error: true, message: error.message })
-    }
-})
-
-patientAuthRouter.post("/onboard", async (request, response) => {
-    const onboardingData = request.body
-    const patientId = request.body.patientId
-
-
-    try {
-        await patientOnboardValidations.validate(onboardingData)
-
-        const patient = await patientModel.findOne({where: {id: patientId}})
-        
-        if (patient === null) {
-            throw new Error("Invalid patient id")
-        }
-
-        await patient.update({
-            healthHistory: onboardingData.healthHistory,
-            location: onboardingData.location,
-            lookingFor: onboardingData.lookingFor
-        })
-
-
-        const safePatient = JSON.parse(JSON.stringify(patient))
-
-        delete safePatient.password
-
-        return response.status(200)
-            .json(safePatient)
     } catch (error) {
         console.error(error)
         return response.status(400)

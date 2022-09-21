@@ -35,6 +35,11 @@ const appointmentModel = sequelize.define("appointment", {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    feedbackCompleted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false
+    },
     prescriptions: {
         type: DataTypes.TEXT,
         allowNull: true,

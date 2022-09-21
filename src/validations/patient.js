@@ -51,6 +51,24 @@ const validSlots = {
     "1410": true
 }
 
+
+// TODO: Stronger validation on healthHistory
+export const patientOnboardValidations = yup.object().shape({
+    patientId: yup.string()
+        .required("patientId is a required field"),
+    healthHistory: yup.array()
+        .required("healthHistory is a required field"),
+    location: yup.string()
+        .required("location is a required field"),
+    lookingFor: yup.array()
+        .min(1, "Please pick at least one type of consultancy you're looking for")
+        .required("lookingFor is a required field"),
+    age: yup.number()
+        .required("age is a required field"),
+    gender: yup.string()
+        .required("gender is a required field"),
+})
+
 export const createAppointmentValidations = yup.object().shape(
     {
         doctorId: yup.string()
@@ -68,8 +86,16 @@ export const createAppointmentValidations = yup.object().shape(
                 "Invalid slot for appointment",
                 (slot) => validSlots[slot] === true
             )
-            .required("slot is a required field"),
-
+            .required("slot is a required field")
     }
 )
+
+export const reviewValidations = yup.object().shape({
+    appointmentId: yup.string()
+        .required("appointmentId is a required field"),
+    rating: yup.number()
+        .min(1, "Minimum rating is 1 star")
+        .max(5, "Maximum rating is 5 star")
+        .required("rating is a required field"),
+})
 
