@@ -120,6 +120,8 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
 
         const safeDoctor = JSON.parse(JSON.stringify(doctor))
 
+        console.log(safeDoctor.availability)
+
         delete safeDoctor.password
 
         return response.status(200)
