@@ -2,8 +2,11 @@ import { Router } from "express";
 import { signupValidations, signinValidations, doctorOnboardValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import sequelize, { doctorModel, patientModel } from "../database/db_config.js";
+import doctorModel from "../database/doctor.model.js";
+import passwordResetModel from "../database/password_reset.model.js";
+import { customAlphabet, urlAlphabet } from "nanoid"
 
+const nanoid = customAlphabet(urlAlphabet, 64)
 
 const doctorAuthRouter = Router()
 
@@ -93,11 +96,10 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
     const onboardingData = request.body
     const doctorId = request.body.doctorId
 
-
     try {
         await doctorOnboardValidations.validate(onboardingData)
 
-        const doctor = await doctorModel.findOne({where: {id: doctorId}})
+        const doctor = await doctorModel.findOne({ where: { id: doctorId } })
 
         if (doctor === null) {
             throw new Error("Invalid doctor id")
@@ -126,6 +128,73 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
             .json({ error: true, message: error.message })
     }
 })
+
+doctorAuthRouter.post("/requestPasswordReset", async (request, response) => {
+    const doctorEmail = request.body.email
+
+    try {
+        const doctor = await doctorModel.findOne({ where: { email: doctorEmail } })
+
+        if (doctor === null) {
+            throw new Error("There is no account associated with this email")
+        }
+
+        const passwordReset = await passwordResetModel.create({
+            doctorId: doctor.id,
+            secret: nanoid()
+        })
+
+        // TODO: Send email with secret url
+
+        return response.status(200)
+            .json({ message: "The instructions to reset your password has been emailed to " + doctorEmail })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+doctorAuthRouter.post("/passwordReset", async (request, response) => {
+    const secret = request.body.secret
+    const newPassword = request.body.newPassword
+
+    try {
+        if (newPassword === null || newPassword === undefined || newPassword === ""){
+            throw new Error("newPassword is a required field")
+        }
+
+        const passwordReset = await passwordResetModel.findOne({ where: { secret: secret } })
+
+        if (passwordReset === null) {
+            throw new Error("Invalid password reset secret")
+        }
+        if (Date.now() > passwordReset.get("createdAt").getTime() + 3600000) {
+            throw new Error("Password reset secret expired, please request a new one")
+        }
+
+        const salt = await bcrypt.genSalt(5)
+        const hashedPassword = await bcrypt.hash(newPassword, salt)
+
+        const doctor = await doctorModel.findOne({ where: { id: passwordReset.doctorId } })
+
+        await doctor.update({
+            password: hashedPassword
+        })
+
+        await doctor.save()
+
+        await passwordResetModel.destroy({ where: { doctorId: doctor.id } })
+
+        return response.status(200)
+            .json({message: "Your password has been reset successfully"})
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
 
 // TODO: Refresh token
 export default doctorAuthRouter

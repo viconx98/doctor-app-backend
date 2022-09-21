@@ -36,7 +36,7 @@ expressApp.use("/doctor/auth", doctorAuthRouter)
 expressApp.use("/patient/auth", patientAuthRouter)
 
 try {
-    await sequelize.sync({force: true})
+    // await sequelize.sync({force: true})
     await sequelize.authenticate()
     expressApp.listen(PORT, () => console.log("Express server up and running on", PORT))
 } catch (error) {

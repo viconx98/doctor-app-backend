@@ -2,8 +2,11 @@ import { Router } from "express";
 import { signupValidations, signinValidations, patientOnboardValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { patientModel } from "../database/db_config.js";
+import patientModel from "../database/patient.model.js";
+import passwordResetModel from "../database/password_reset.model.js";
+import { customAlphabet, urlAlphabet } from "nanoid"
 
+const nanoid = customAlphabet(urlAlphabet, 64)
 
 const patientAuthRouter = Router()
 
@@ -124,5 +127,71 @@ patientAuthRouter.post("/onboard", async (request, response) => {
     }
 })
 
+patientAuthRouter.post("/requestPasswordReset", async (request, response) => {
+    const patientEmail = request.body.email
+
+    try {
+        const patient = await patientModel.findOne({ where: { email: patientEmail } })
+
+        if (patient === null) {
+            throw new Error("There is no account associated with this email")
+        }
+
+        const passwordReset = await passwordResetModel.create({
+            patientId: patient.id,
+            secret: nanoid()
+        })
+
+        // TODO: Send email with secret url
+
+        return response.status(200)
+            .json({ message: "The instructions to reset your password has been emailed to " + patientEmail })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+patientAuthRouter.post("/passwordReset", async (request, response) => {
+    const secret = request.body.secret
+    const newPassword = request.body.newPassword
+
+    try {
+        if (newPassword === null || newPassword === undefined || newPassword === ""){
+            throw new Error("newPassword is a required field")
+        }
+
+        const passwordReset = await passwordResetModel.findOne({ where: { secret: secret } })
+
+        if (passwordReset === null) {
+            throw new Error("Invalid password reset secret")
+        }
+
+        if (Date.now() > passwordReset.get("createdAt").getTime() + 3600000) {
+            throw new Error("Password reset secret expired, please request a new one")
+        }
+
+        const salt = await bcrypt.genSalt(5)
+        const hashedPassword = await bcrypt.hash(newPassword, salt)
+
+        const patient = await patientModel.findOne({ where: { id: passwordReset.patientId } })
+
+        await patient.update({
+            password: hashedPassword
+        })
+
+        await patient.save()
+
+        await passwordResetModel.destroy({ where: { patientId: patient.id } })
+
+        return response.status(200)
+            .json({message: "Your password has been reset successfully"})
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
 // TODO: Refresh token
 export default patientAuthRouter
