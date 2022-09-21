@@ -27,8 +27,6 @@ doctorAuthRouter.post("/signup", async (request, response) => {
 
         const newDoctor = await doctorModel.create({ name: authData.name, email: authData.email, password: hashedPassword })
 
-        console.log(newDoctor)
-
         const userResponse = {
             id: newDoctor.get("id"),
             name: newDoctor.get("name"),
@@ -53,7 +51,7 @@ doctorAuthRouter.post("/signup", async (request, response) => {
 
 doctorAuthRouter.post("/signin", async (request, response) => {
     const authData = request.body
-    console.log(authData)
+
     try {
         await signinValidations.validate(authData)
 
@@ -116,11 +114,8 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
             onboardingComplete: true
         })
 
-        await doctor.save()
 
         const safeDoctor = JSON.parse(JSON.stringify(doctor))
-
-        console.log(safeDoctor.availability)
 
         delete safeDoctor.password
 
@@ -185,8 +180,6 @@ doctorAuthRouter.post("/passwordReset", async (request, response) => {
         await doctor.update({
             password: hashedPassword
         })
-
-        await doctor.save()
 
         await passwordResetModel.destroy({ where: { doctorId: doctor.id } })
 

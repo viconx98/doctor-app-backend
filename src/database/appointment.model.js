@@ -49,5 +49,5 @@ const appointmentModel = sequelize.define("appointment", {
     }
 })
 
-await appointmentModel.sync({force: true})
+// await appointmentModel.sync({force: true})
 export default appointmentModel

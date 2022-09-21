@@ -8,6 +8,28 @@ import { intToDay } from "../validations/constants.js";
 
 const patientRouter = Router()
 
+function authorize(request, response, next) {
+    const authorization = request.headers.authorization
+
+    try {
+        if (authorization === null || authorization === undefined) {
+            throw new Error("Invalid access token")
+        }
+
+        const token = authorization.split(" ")[1]
+        const payload = jwt.verify(token, process.env.PATIENT_ACCESS_TOKEN_SECRET)
+
+        request.user = payload
+
+        next()
+    } catch (error) {
+        console.error(error)
+        return response.status(403)
+            .json({ error: true, message: error.message })
+    }
+}
+
+patientRouter.use(authorize)
 // TODO: Get patient's upcoming appointments
 // TODO: Give rating and review to doctor
 
@@ -56,8 +78,7 @@ patientRouter.post("/createAppointment", async (request, response) => {
             doctorId: appointmentData.doctorId,
             patientId: patientId,
             date: appointmentDate,
-            slot: Number(slot),
-
+            slot: Number(slot)
         })
 
         return response.status(200) 

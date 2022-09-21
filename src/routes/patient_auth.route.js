@@ -112,7 +112,6 @@ patientAuthRouter.post("/onboard", async (request, response) => {
             lookingFor: onboardingData.lookingFor
         })
 
-        await patient.save()
 
         const safePatient = JSON.parse(JSON.stringify(patient))
 
@@ -180,8 +179,6 @@ patientAuthRouter.post("/passwordReset", async (request, response) => {
         await patient.update({
             password: hashedPassword
         })
-
-        await patient.save()
 
         await passwordResetModel.destroy({ where: { patientId: patient.id } })
 
