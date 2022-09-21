@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupValidations, signinValidations, doctorOnboardValidations } from "../validations/auth.js"
+import { signupValidations, signinValidations, doctorOnboardValidations, doctorAvailabilityValidations } from "../validations/auth.js"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import doctorModel from "../database/doctor.model.js";
@@ -98,6 +98,7 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
 
     try {
         await doctorOnboardValidations.validate(onboardingData)
+        await doctorAvailabilityValidations.validate(onboardingData.availability)
 
         const doctor = await doctorModel.findOne({ where: { id: doctorId } })
 
@@ -111,6 +112,7 @@ doctorAuthRouter.post("/onboard", async (request, response) => {
             hospital: onboardingData.hospital,
             location: onboardingData.location,
             specialities: onboardingData.specialities,
+            availability: onboardingData.availability,
             onboardingComplete: true
         })
 

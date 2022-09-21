@@ -49,6 +49,5 @@ export const patientModel = sequelize.define("patient", {
     }
 })
 
-// Age, gender
-
+// await patientModel.sync({force: true})
 export default patientModel

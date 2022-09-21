@@ -49,9 +49,12 @@ const doctorModel = sequelize.define("doctor", {
     specialities: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         allowNull: true,
+    },
+    availability: {
+        type: DataTypes.JSON,
+        allowNull: true
     }
 })
 
-// TODO: Doctor Availability 
-
+// await doctorModel.sync({force: true})
 export default doctorModel
