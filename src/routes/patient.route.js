@@ -65,6 +65,23 @@ patientRouter.post("/onboard", async (request, response) => {
     }
 })
 
+patientRouter.get("/onboardStatus", async (request, response) => {
+    const patientId = request.user.id
+
+    try {
+        const onboardStatus = await patientModel.findOne({
+            attributes: ["onboardingComplete"],
+            where: { id: patientId }
+        })
+
+        return response.status(200)
+            .json({ onboardingCompleted: onboardStatus.get("onboardingComplete") })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
 
 
 // TODO: Get patient's upcoming appointments

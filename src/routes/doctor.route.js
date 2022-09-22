@@ -67,6 +67,24 @@ doctorRouter.post("/onboard", async (request, response) => {
     }
 })
 
+doctorRouter.get("/onboardStatus", async (request, response) => {
+    const doctorId = request.user.id
+
+    try {
+        const onboardStatus = await doctorModel.findOne({
+            attributes: ["onboardingComplete"],
+            where: { id: doctorId }
+        })
+
+        return response.status(200)
+            .json({ onboardingCompleted: onboardStatus.get("onboardingComplete") })
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
 // TODO: Get all appointments
 doctorRouter.get("/appointments", async (request, response) => {
     const doctorId = request.user.id
@@ -106,7 +124,7 @@ doctorRouter.post("/closeAppointment", async (request, response) => {
         if (appointment === null) {
             throw new Error("Invalid appointment id")
         }
-        
+
         if (appointment.get("doctorId") !== doctorId) {
             throw new Error("This appointment doesn't belong to you")
         }
