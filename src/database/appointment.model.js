@@ -54,5 +54,8 @@ const appointmentModel = sequelize.define("appointment", {
     }
 })
 
+appointmentModel.belongsTo(doctorModel)
+appointmentModel.belongsTo(patientModel)
+
 // await appointmentModel.sync({force: true})
 export default appointmentModel
