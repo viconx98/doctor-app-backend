@@ -30,7 +30,8 @@ doctorAuthRouter.post("/signup", async (request, response) => {
         const userResponse = {
             id: newDoctor.get("id"),
             name: newDoctor.get("name"),
-            email: newDoctor.get("email")
+            email: newDoctor.get("email"),
+            type: "doctor"
         }
 
         const accessToken = jwt.sign(userResponse, process.env.DOCTOR_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })

@@ -30,7 +30,8 @@ patientAuthRouter.post("/signup", async (request, response) => {
         const userResponse = {
             id: newPatient.get("id"),
             name: newPatient.get("name"),
-            email: newPatient.get("email")
+            email: newPatient.get("email"),
+            type: "patient"
         }
 
         const accessToken = jwt.sign(userResponse, process.env.PATIENT_ACCESS_TOKEN_SECRET, { expiresIn: process.env.ACCESS_TOKEN_EXPIRE_TIME })
