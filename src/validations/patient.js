@@ -54,9 +54,7 @@ const validSlots = {
 
 // TODO: Stronger validation on healthHistory
 export const patientOnboardValidations = yup.object().shape({
-    patientId: yup.string()
-        .required("patientId is a required field"),
-    healthHistory: yup.array()
+    healthHistory: yup.string()
         .required("healthHistory is a required field"),
     location: yup.string()
         .required("location is a required field"),

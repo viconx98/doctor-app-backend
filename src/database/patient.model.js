@@ -36,7 +36,8 @@ export const patientModel = sequelize.define("patient", {
         allowNull: true
     },
     healthHistory: {
-        type: DataTypes.ARRAY(DataTypes.ARRAY((DataTypes.STRING))),
+        // type: DataTypes.ARRAY(DataTypes.ARRAY((DataTypes.STRING))),
+        type: DataTypes.STRING,
         allowNull: true,
     },
     location: {

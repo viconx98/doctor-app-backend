@@ -48,7 +48,10 @@ patientRouter.post("/onboard", async (request, response) => {
         await patient.update({
             healthHistory: onboardingData.healthHistory,
             location: onboardingData.location,
-            lookingFor: onboardingData.lookingFor
+            lookingFor: onboardingData.lookingFor,
+            age: onboardingData.age,
+            gender: onboardingData.gender,
+            onboardingComplete: true
         })
 
 
