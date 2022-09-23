@@ -50,6 +50,7 @@ doctorRouter.post("/onboard", async (request, response) => {
             location: onboardingData.location,
             specialities: onboardingData.specialities,
             availability: onboardingData.availability,
+            consultationFees: onboardingData.consultationFees,
             onboardingComplete: true
         })
 

@@ -87,7 +87,7 @@ patientRouter.get("/onboardStatus", async (request, response) => {
 })
 
 
-// TODO: Get patient's upcoming appointments
+// Get patient's upcoming appointments
 patientRouter.get("/appointments", async (request, response) => {
     const patientId = request.user.id
     const status = request.query.status
@@ -113,7 +113,7 @@ patientRouter.get("/appointments", async (request, response) => {
     }
 })
 
-// TODO: Book an appointment
+// Book an appointment
 patientRouter.post("/createAppointment", async (request, response) => {
     const patientId = request.user.id
     const appointmentData = request.body
@@ -170,7 +170,7 @@ patientRouter.post("/createAppointment", async (request, response) => {
     }
 })
 
-// TODO: Give rating and review to doctor
+// Give rating and review to doctor
 patientRouter.post("/rateAndReview", async (request, response) => {
     const patientId = request.user.id
     const ratingData = request.body
@@ -207,5 +207,74 @@ patientRouter.post("/rateAndReview", async (request, response) => {
             .json({ error: true, message: error.message })
     }
 })
+
+// Get all doctors
+patientRouter.get("/doctors", async (request, response) => {
+    try {
+        const doctors = await doctorModel.findAll({
+            attributes: { exclude: ["password", "availability"] },
+            where: { onboardingComplete: true }
+        })
+
+        return response.status(200)
+            .json(doctors)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+// Get slots of a particular doctor
+patientRouter.get("/doctorSlots", async (request, response) => {
+    const doctorId = request.body.doctorId
+
+    try {
+        if (doctorId === null || doctorId === undefined || doctorId === "") {
+            throw new Error("Invalid doctor id")
+        }
+
+        // Parse the date
+        const date = new Date(request.body.date)
+        if (new date.toString === "Invalid Date") {
+            throw new Error("Invalid date") 
+        }
+
+        // Get the day from date
+        const day = intToDay[date.getDay()]
+
+        // Get the full avaialability schedule of the doctor
+        const availability = await doctorModel.findAll({
+            attributes: { include: ["availability"] },
+            where: { id: doctorId }
+        })
+        
+        // Get the avaialability schedule of the doctor for the requested day
+        const availabilityOnDay = availability[day]
+        
+        // Get the avaialability schedule of the doctor for the requested day/date
+        const appointments = await appointmentModel.findAll({
+            doctorId: doctorId,
+            date: date,
+            status: "pending"
+        })
+
+        // Get rid of the slots which are already booked
+        for (const appointment of appointments) {
+            const slot = appointment.get("slot")
+
+            delete availabilityOnDay[slot]
+        }
+
+
+        return response.status(200)
+            .json(availabilityOnDay)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
 
 export default patientRouter
