@@ -226,7 +226,7 @@ patientRouter.get("/doctors", async (request, response) => {
 })
 
 // Get slots of a particular doctor
-patientRouter.get("/doctorSlots", async (request, response) => {
+patientRouter.post("/doctorSlots", async (request, response) => {
     const doctorId = request.body.doctorId
 
     try {
@@ -236,22 +236,31 @@ patientRouter.get("/doctorSlots", async (request, response) => {
 
         // Parse the date
         const date = new Date(request.body.date)
-        if (new date.toString === "Invalid Date") {
-            throw new Error("Invalid date") 
+        if (date.toString() === "Invalid Date") {
+            throw new Error("Invalid date")
         }
 
         // Get the day from date
         const day = intToDay[date.getDay()]
 
         // Get the full avaialability schedule of the doctor
-        const availability = await doctorModel.findAll({
+        const doctor = await doctorModel.findOne({
             attributes: { include: ["availability"] },
             where: { id: doctorId }
         })
-        
+
+        if (doctor === null) {
+            throw new Error("Invalid doctor id")
+        }
+
         // Get the avaialability schedule of the doctor for the requested day
-        const availabilityOnDay = availability[day]
-        
+        const availabilityOnDay = doctor.get("availability")[day]
+
+        if (availabilityOnDay === undefined || availabilityOnDay === null) {
+            return response.status(200)
+                .json({})
+        }
+
         // Get the avaialability schedule of the doctor for the requested day/date
         const appointments = await appointmentModel.findAll({
             doctorId: doctorId,
