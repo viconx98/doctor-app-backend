@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken"
 import { closeAppointmentValidations, doctorOnboardValidations, doctorAvailabilityValidations } from "../validations/doctor.js";
 import appointmentModel from "../database/appointment.model.js";
 import doctorModel from "../database/doctor.model.js";
+import patientModel from "../database/patient.model.js";
 
 const doctorRouter = Router()
 
@@ -90,15 +91,28 @@ doctorRouter.get("/onboardStatus", async (request, response) => {
 doctorRouter.get("/appointments", async (request, response) => {
     const doctorId = request.user.id
     const status = request.query.status
+    const date = request.query.date
 
     try {
         const filter = {
+            include: {
+                attributes: { exclude: ["password"] },
+                model: patientModel
+            },
             where: {
                 doctorId: doctorId
             }
         }
 
         if (status !== undefined) filter.where.status = status
+        if (date !== undefined) {
+            const parsedDate = new Date(date)
+            if (parsedDate.toString() === "Invalid Date") {
+                throw new Error("Invalid date")
+            }
+
+            filter.where.date = parsedDate.toISOString()
+        }
 
         const appointments = await appointmentModel.findAll(filter)
 
