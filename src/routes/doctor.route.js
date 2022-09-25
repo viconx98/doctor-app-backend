@@ -4,6 +4,7 @@ import { closeAppointmentValidations, doctorOnboardValidations, doctorAvailabili
 import appointmentModel from "../database/appointment.model.js";
 import doctorModel from "../database/doctor.model.js";
 import patientModel from "../database/patient.model.js";
+import { Op } from "sequelize";
 
 const doctorRouter = Router()
 
@@ -104,7 +105,13 @@ doctorRouter.get("/appointments", async (request, response) => {
             }
         }
 
-        if (status !== undefined) filter.where.status = status
+        // Apply status filter
+        if (status !== undefined) {
+            const statuses = status.split(",")
+            filter.where.status = { [Op.or]: statuses }
+        }
+
+        // Apply date filter
         if (date !== undefined) {
             const parsedDate = new Date(date)
             if (parsedDate.toString() === "Invalid Date") {
@@ -126,7 +133,7 @@ doctorRouter.get("/appointments", async (request, response) => {
 })
 
 
-// TODO: Close appointment
+// Close appointment
 doctorRouter.post("/closeAppointment", async (request, response) => {
     const doctorId = request.user.id
     const appointmentData = request.body
@@ -134,7 +141,15 @@ doctorRouter.post("/closeAppointment", async (request, response) => {
     try {
         await closeAppointmentValidations.validate(appointmentData)
 
-        const appointment = await appointmentModel.findOne({ where: { id: appointmentData.appointmentId } })
+        const appointment = await appointmentModel.findOne({
+            include: {
+                attributes: { exclude: ["password"] },
+                model: patientModel
+            },
+            where: {
+                id: appointmentData.appointmentId
+            }
+        })
 
         if (appointment === null) {
             throw new Error("Invalid appointment id")
@@ -148,6 +163,41 @@ doctorRouter.post("/closeAppointment", async (request, response) => {
             status: "completed",
             notes: appointmentData.notes,
             prescriptions: appointmentData.prescriptions
+        })
+
+        return response.status(200)
+            .json(appointment)
+    } catch (error) {
+        console.error(error)
+        return response.status(400)
+            .json({ error: true, message: error.message })
+    }
+})
+
+// Close appointment
+doctorRouter.post("/cancelAppointment", async (request, response) => {
+    const doctorId = request.user.id
+    const appointmentId = request.body.appointmentId
+
+    try {
+        const appointment = await appointmentModel.findOne({
+            include: {
+                attributes: { exclude: ["password"] },
+                model: patientModel
+            },
+            where: { id: appointmentId }
+        })
+
+        if (appointment === null) {
+            throw new Error("Invalid appointment id")
+        }
+
+        if (appointment.get("doctorId") !== doctorId) {
+            throw new Error("This appointment doesn't belong to you")
+        }
+
+        await appointment.update({
+            status: "cancelled",
         })
 
         return response.status(200)
