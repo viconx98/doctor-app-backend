@@ -5,6 +5,8 @@ import appointmentModel from "../database/appointment.model.js";
 import doctorModel from "../database/doctor.model.js";
 import patientModel from "../database/patient.model.js";
 import { Op } from "sequelize";
+import qualificationsModel from "../database/qualifications.model.js";
+import specialityModel from "../database/speciality.model.js";
 
 const doctorRouter = Router()
 
@@ -30,6 +32,32 @@ function authorize(request, response, next) {
 }
 
 doctorRouter.use(authorize)
+
+doctorRouter.get("/qualifications", async (request, response) => {
+    try {
+        const qualifications = await qualificationsModel.findAll()
+
+        return response.status(200)
+            .json(qualifications)
+    } catch (error) {
+        console.error(error)
+        return response.status(403)
+            .json({ error: true, message: error.message })
+    }
+})
+
+doctorRouter.get("/specialities", async (request, response) => {
+    try {
+        const specialities = await specialityModel.findAll()
+
+        return response.status(200)
+            .json(specialities)
+    } catch (error) {
+        console.error(error)
+        return response.status(403)
+            .json({ error: true, message: error.message })
+    }
+})
 
 doctorRouter.post("/onboard", async (request, response) => {
     const onboardingData = request.body

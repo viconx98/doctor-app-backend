@@ -15,6 +15,9 @@ import * as path from "path"
 import * as url from "url"
 import patientRouter from "./routes/patient.route.js"
 import doctorRouter from "./routes/doctor.route.js"
+import { qualifications, specialities } from "./validations/constants.js"
+import qualificationsModel from "./database/qualifications.model.js"
+import specialityModel from "./database/speciality.model.js"
 const __filename = url.fileURLToPath(import.meta.url)
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url))
 
@@ -43,6 +46,17 @@ expressApp.use("/doctor", doctorRouter)
 try {
     // await sequelize.sync({force: true})
     await sequelize.authenticate()
+
+    // // TODO: Comment out on deploy
+    // for (const qualification of qualifications) {
+    //     await qualificationsModel.create({title: qualification})
+    // }
+
+    // // TODO: Comment out on deploy
+    // for (const speciality of specialities) {
+    //     await specialityModel.create({title: speciality})
+    // }
+
     expressApp.listen(PORT, () => console.log("Express server up and running on", PORT))
 } catch (error) {
     console.log("Connection to database failed with ", error)
