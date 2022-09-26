@@ -6,6 +6,7 @@ import doctorModel from "../database/doctor.model.js";
 import appointmentModel from "../database/appointment.model.js";
 import patientModel from "../database/patient.model.js";
 import { intToDay } from "../validations/constants.js";
+import { Op } from "sequelize";
 
 const patientRouter = Router()
 
@@ -87,20 +88,38 @@ patientRouter.get("/onboardStatus", async (request, response) => {
 })
 
 
-// Get patient's upcoming appointments
+// Get patient's appointments
 patientRouter.get("/appointments", async (request, response) => {
     const patientId = request.user.id
     const status = request.query.status
-
+    const date = request.query.date
 
     try {
         const filter = {
+            include: {
+                attributes: { exclude: ["password"] },
+                model: doctorModel
+            },
             where: {
                 patientId: patientId
             }
         }
 
-        if (status !== undefined) filter.where.status = status
+        // Apply status filter
+        if (status !== undefined) {
+            const statuses = status.split(",")
+            filter.where.status = { [Op.or]: statuses }
+        }
+
+        // Apply date filter
+        if (date !== undefined) {
+            const parsedDate = new Date(date)
+            if (parsedDate.toString() === "Invalid Date") {
+                throw new Error("Invalid date")
+            }
+
+            filter.where.date = parsedDate.toISOString()
+        }
 
         const appointments = await appointmentModel.findAll(filter)
 
@@ -112,6 +131,7 @@ patientRouter.get("/appointments", async (request, response) => {
             .json({ error: true, message: error.message })
     }
 })
+
 
 // Book an appointment
 patientRouter.post("/createAppointment", async (request, response) => {
@@ -178,7 +198,13 @@ patientRouter.post("/rateAndReview", async (request, response) => {
     try {
         await reviewValidations.validate(ratingData)
 
-        const appointment = await appointmentModel.findOne({ where: { id: ratingData.appointmentId } })
+        const appointment = await appointmentModel.findOne({
+            include: {
+                attributes: { exclude: ["password"] },
+                model: doctorModel
+            },
+            where: { id: ratingData.appointmentId }
+        })
 
         if (appointment === null) {
             throw new Error("Invalid appointment id")
@@ -192,12 +218,11 @@ patientRouter.post("/rateAndReview", async (request, response) => {
             throw new Error("This appointment doesn't belong to you")
         }
 
-        await appointment.update(
-            {
-                rating: ratingData.rating,
-                review: ratingData.review
-            }
-        )
+        await appointment.update({
+            rating: ratingData.rating,
+            review: ratingData.review,
+            feedbackCompleted: true
+        })
 
         return response.status(200)
             .json(appointment)
