@@ -5,6 +5,32 @@ import jwt from "jsonwebtoken"
 import patientModel from "../database/patient.model.js";
 import passwordResetModel from "../database/password_reset.model.js";
 import { customAlphabet, urlAlphabet } from "nanoid"
+import mailgun from "mailgun-js"
+
+const mg = mailgun({ apiKey: process.env.MG_API_KEY, domain: "sandbox70f120240379468c9bfaa7eaeb43009e.mailgun.org" });
+
+const mailTemplate = (resetLink) => {
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-conent: center;
+            align-items: center;
+        }
+    </style>
+    <title>Page Title</title>
+    </head>
+    <body>
+    
+    <h1>Password Reset Request</h1>
+    <p>Please go to the following link to reset the password</p>
+    <a href="${resetLink}"><h2>Reset Password</h2></a>
+    </body>
+    </html>`
+}
 
 const nanoid = customAlphabet(urlAlphabet, 64)
 
@@ -101,12 +127,28 @@ patientAuthRouter.post("/requestPasswordReset", async (request, response) => {
             throw new Error("There is no account associated with this email")
         }
 
+        const secret = nanoid()
         const passwordReset = await passwordResetModel.create({
             patientId: patient.id,
-            secret: nanoid()
+            secret: secret
         })
 
-        // TODO: Send email with secret url
+        // TODO: Replace url with deployment url
+        const data = {
+            from: 'Doctor App Auth <me@sandbox70f120240379468c9bfaa7eaeb43009e.mailgun.org>',
+            to: patientEmail,
+            subject: 'Password Reset Request',
+            text: mailTemplate(`http://localhost:3000/auth/resetPassword?secret=${secret}&type=patient`)
+        };
+
+        mg.messages().send(data, function (error, body) {
+            if (error) {
+                console.error(error)
+            } else {
+                console.log("Mail sent successfully")
+            }
+        });
+
 
         return response.status(200)
             .json({ message: "The instructions to reset your password has been emailed to " + patientEmail })
@@ -122,7 +164,7 @@ patientAuthRouter.post("/passwordReset", async (request, response) => {
     const newPassword = request.body.newPassword
 
     try {
-        if (newPassword === null || newPassword === undefined || newPassword === ""){
+        if (newPassword === null || newPassword === undefined || newPassword === "") {
             throw new Error("newPassword is a required field")
         }
 
@@ -148,7 +190,7 @@ patientAuthRouter.post("/passwordReset", async (request, response) => {
         await passwordResetModel.destroy({ where: { patientId: patient.id } })
 
         return response.status(200)
-            .json({message: "Your password has been reset successfully"})
+            .json({ message: "Your password has been reset successfully" })
     } catch (error) {
         console.error(error)
         return response.status(400)
