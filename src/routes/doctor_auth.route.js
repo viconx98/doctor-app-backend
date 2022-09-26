@@ -11,28 +11,25 @@ const nanoid = customAlphabet(urlAlphabet, 64)
 
 const mg = mailgun({ apiKey: process.env.MG_API_KEY, domain: "sandbox70f120240379468c9bfaa7eaeb43009e.mailgun.org" });
 
-const mailTemplate = (resetLink) => {
-    return `<!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            justify-conent: center;
-            align-items: center;
-        }
-    </style>
-    <title>Page Title</title>
-    </head>
-    <body>
+// const mailTemplate = (resetLink) => {
+//     return `<!DOCTYPE html>
+//     <html>
+//     <head>
+//     <title>Page Title</title>
+//     </head>
+//     <body style="display: flex; flex-direction: column; justify-conent: center; align-items: center;">
     
-    <h1>Password Reset Request</h1>
-    <p>Please go to the following link to reset the password</p>
-    <a href="${resetLink}"><h2>Reset Password</h2></a>
-    </body>
-    </html>`
+//     <h1>Password Reset Request</h1>
+//     <p>Please go to the following link to reset the password</p>
+//     <a href="${resetLink}"><h2>Reset Password</h2></a>
+//     </body>
+//     </html>`
+// }
+
+const mailTemplate = (resetLink) => {
+    return resetLink
 }
+
 
 const doctorAuthRouter = Router()
 
@@ -138,7 +135,7 @@ doctorAuthRouter.post("/requestPasswordReset", async (request, response) => {
             from: 'Doctor App Auth <me@sandbox70f120240379468c9bfaa7eaeb43009e.mailgun.org>',
             to: doctorEmail,
             subject: 'Password Reset Request',
-            text: mailTemplate(`http://localhost:3000/auth/resetPassword?secret=${secret}&type=doctor`)
+            text: mailTemplate(`${process.env.DEPLOY_URL}/auth/resetPassword?secret=${secret}&type=doctor`)
         };
         
         mg.messages().send(data, function (error, body) {
